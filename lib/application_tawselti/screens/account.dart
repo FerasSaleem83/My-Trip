@@ -1,0 +1,378 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:my_trip/application_khadamati/splashscreen/splashscreen_wait.dart';
+import 'package:my_trip/application_mytrip/authscreen.dart';
+import 'package:my_trip/application_tawselti/splashscreen/splashscreen_wait.dart';
+import 'package:my_trip/detailsuser.dart';
+import 'package:my_trip/style/application_color.dart';
+import 'package:my_trip/style/color_splashscreen.dart';
+import 'package:my_trip/widget/info_card.dart';
+import 'package:provider/provider.dart';
+
+class Account extends StatefulWidget {
+  const Account({super.key});
+
+  @override
+  State<Account> createState() => _AccountState();
+}
+
+class _AccountState extends State<Account> {
+  late Future<DocumentSnapshot<Map<String, dynamic>>> usernameFuture;
+  late Future<int> orderCountFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    usernameFuture = getUserInfo();
+    orderCountFuture = getOrderCount();
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>> getUserInfo() async {
+    User user = FirebaseAuth.instance.currentUser!;
+    String userId = user.uid;
+    DocumentSnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
+        .instance
+        .collection('users')
+        .doc(userId)
+        .collection('information')
+        .doc(userId)
+        .get();
+    return snapshot;
+  }
+
+  Future<int> getOrderCount() async {
+    User user = FirebaseAuth.instance.currentUser!;
+    String userId = user.uid;
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('my_journeys')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future: usernameFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SplashScreenWaitTawselti();
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('${'error'.tr()}: ${snapshot.error}'),
+            );
+          } else if (snapshot.hasData) {
+            String username = snapshot.data!['username'];
+            String userEmail = snapshot.data!['email'];
+            String imageuser = snapshot.data!['image'];
+            String gender = snapshot.data!['gender'];
+            String phone = snapshot.data!['phonenumber'];
+            int age = snapshot.data!['age'];
+            String placeResidence = snapshot.data!['place_residence'];
+            int point = snapshot.data!['point'];
+            double wallet = snapshot.data!['wallet'].toDouble();
+
+            return Scaffold(
+              body: BackgroundSplashScreen(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InfoCard.buildInfoCard([
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 60,
+                                    backgroundColor:
+                                        const Color.fromARGB(255, 0, 0, 0),
+                                    backgroundImage: imageuser.isNotEmpty
+                                        ? NetworkImage(imageuser)
+                                        : const AssetImage(
+                                                'assets/image/user.png')
+                                            as ImageProvider,
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          username,
+                                          style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 23,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          userEmail,
+                                          style: const TextStyle(
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    DetailsUser(
+                                                  userName: username,
+                                                  userEmail: userEmail,
+                                                  imageUsers: imageuser,
+                                                  userId: FirebaseAuth.instance
+                                                      .currentUser!.uid,
+                                                  gender: gender,
+                                                  phone: phone,
+                                                  age: age,
+                                                  placeResidence:
+                                                      placeResidence,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: Image.asset(
+                                            'assets/image/edit.png',
+                                            width: 25,
+                                            height: 25,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ], const Color.fromARGB(255, 205, 205, 205)),
+                          ),
+                        ],
+                      ),
+                      FutureBuilder<int>(
+                        future: orderCountFuture,
+                        builder: (context, orderSnapshot) {
+                          if (orderSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const SplashScreenWaitTawselti();
+                          } else if (orderSnapshot.hasError) {
+                            return Text(
+                                '${'error'.tr()}: ${orderSnapshot.error}');
+                          } else {
+                            int orderCount = orderSnapshot.data ?? 0;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: InfoCard.buildInfoCard([
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            TextButton.icon(
+                                              onPressed: () {},
+                                              icon: Image.asset(
+                                                'assets/image/wallet.png',
+                                                width: 40,
+                                                height: 40,
+                                              ),
+                                              label: Text(
+                                                '${'my_wallet'.tr()} : $wallet ${'currency'.tr()}',
+                                                style: const TextStyle(
+                                                  color: Color.fromARGB(
+                                                      255, 0, 0, 0),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            TextButton.icon(
+                                              onPressed: () {},
+                                              icon: Image.asset(
+                                                'assets/image/box.png',
+                                                width: 40,
+                                                height: 40,
+                                              ),
+                                              label: Text(
+                                                '${'my_points'.tr()} : $point',
+                                                style: const TextStyle(
+                                                  color: Color.fromARGB(
+                                                      255, 0, 0, 0),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            TextButton.icon(
+                                              onPressed: () {},
+                                              icon: Image.asset(
+                                                'assets/image/checklist.png',
+                                                width: 40,
+                                                height: 40,
+                                              ),
+                                              label: Text(
+                                                '${'my_orders'.tr()} : $orderCount',
+                                                style: const TextStyle(
+                                                  color: Color.fromARGB(
+                                                      255, 0, 0, 0),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ], const Color.fromARGB(255, 205, 205, 205)),
+                                ),
+                              ],
+                            );
+                          }
+                        },
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: InfoCard.buildInfoCard([
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextButton.icon(
+                                          onPressed: () {
+                                            themeNotifier.toggleTheme();
+                                          },
+                                          icon: Image.asset(
+                                            'assets/image/color.png',
+                                            width: 30,
+                                            height: 30,
+                                          ),
+                                          label: Text(
+                                            'discoloration'.tr(),
+                                            style: const TextStyle(
+                                              color:
+                                                  Color.fromARGB(255, 0, 0, 0),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextButton.icon(
+                                          onPressed: () async {
+                                            await EasyLocalization.of(context)
+                                                ?.setLocale(
+                                              EasyLocalization.of(context)
+                                                          ?.locale ==
+                                                      const Locale('en', 'US')
+                                                  ? const Locale('ar', 'SA')
+                                                  : const Locale('en', 'US'),
+                                            );
+                                          },
+                                          icon: Image.asset(
+                                            'assets/image/language.png',
+                                            width: 30,
+                                            height: 30,
+                                          ),
+                                          label: Text(
+                                            'change_language'.tr(),
+                                            style: const TextStyle(
+                                              color:
+                                                  Color.fromARGB(255, 0, 0, 0),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ], const Color.fromARGB(255, 205, 205, 205)),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: InfoCard.buildInfoCard([
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton.icon(
+                                      onPressed: () async {
+                                        await FirebaseAuth.instance.signOut();
+                                        await Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const AuthScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.power_settings_new,
+                                        color: Colors.red,
+                                        size: 27,
+                                      ),
+                                      label: Text(
+                                        'logout'.tr(),
+                                        style: const TextStyle(
+                                          color: Color.fromARGB(255, 0, 0, 0),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ], const Color.fromARGB(255, 205, 205, 205)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          } else {
+            return const Center(
+              child: SplashScreenWaitKhdamati(),
+            );
+          }
+        });
+  }
+}
